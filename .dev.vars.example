@@ -1,0 +1,4 @@
+# Sao chép thành .dev.vars để chạy local với wrangler
+# Key này dùng phía server (worker), KHÔNG lộ ra browser
+
+ANTHROPIC_API_KEY=sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxx

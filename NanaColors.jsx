@@ -286,9 +286,6 @@ export default function NanaColors() {
   const [selectedColor, setSelectedColor] = useState("#FFB7D5");
   const [selectedChar, setSelectedChar] = useState("bunny");
   const [colorsByChar, setColorsByChar] = useState({ bunny: {}, cat: {}, fairy: {} });
-  const envKey = typeof import.meta !== "undefined" ? (import.meta.env?.VITE_ANTHROPIC_API_KEY || "") : "";
-  const [apiKey, setApiKey] = useState(envKey);
-  const [showApiKey, setShowApiKey] = useState(!envKey);
   const [isLoading, setIsLoading] = useState(false);
   const [praise, setPraise] = useState(null);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -341,49 +338,29 @@ export default function NanaColors() {
   };
 
   const handleDone = async () => {
-    if (!apiKey) {
-      setShowApiKey(true);
-      setError("Vui lòng nhập API Key để nhận lời khen từ Nana AI! 🌟");
-      return;
-    }
     setIsLoading(true);
     setError(null);
     try {
       const base64 = await captureSVGAsBase64();
       const colorsSummary = getColorsSummary();
       const charNames = { bunny: "thỏ", cat: "mèo", fairy: "tiên" };
-      const charName = charNames[selectedChar];
 
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/praise", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-calls": "true",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 180,
-          system: `Bạn là người bạn vui vẻ, dễ thương đang khen bé gái 6 tuổi tên Nana vừa tô màu xong bức tranh ${charName}. Khen 2-3 câu ngắn bằng tiếng Việt, thật vui vẻ, đề cập màu sắc Nana dùng. Dùng emoji dễ thương.`,
-          messages: [
-            {
-              role: "user",
-              content: [
-                { type: "image", source: { type: "base64", media_type: "image/png", data: base64 } },
-                { type: "text", text: `Nana vừa tô xong bức tranh ${charName}! Nana dùng màu: ${colorsSummary}. Khen Nana đi!` },
-              ],
-            },
-          ],
+          imageBase64: base64,
+          colorsSummary,
+          charName: charNames[selectedChar],
         }),
       });
 
       if (!res.ok) {
         const e = await res.json();
-        throw new Error(e.error?.message || `Lỗi ${res.status}`);
+        throw new Error(e.error || `Lỗi ${res.status}`);
       }
       const data = await res.json();
-      setPraise(data.content[0].text);
+      setPraise(data.praise);
       setShowCelebration(true);
       setTimeout(() => setShowCelebration(false), 5000);
     } catch (err) {
@@ -547,37 +524,6 @@ export default function NanaColors() {
           >
             {isLoading ? "⏳ Đang gửi..." : "✨ Nana xong rồi!"}
           </button>
-        </div>
-
-        {/* API Key */}
-        <div style={{ width: "100%", maxWidth: 340, padding: "0 16px", marginBottom: 8 }}>
-          <button
-            onClick={() => setShowApiKey((v) => !v)}
-            style={{ background: "none", border: "none", color: "#9CA3AF", fontSize: 12, textDecoration: "underline", cursor: "pointer", width: "100%", textAlign: "center" }}
-          >
-            {showApiKey ? "Ẩn cài đặt" : "⚙️ Cài đặt API Key"}
-          </button>
-          {showApiKey && (
-            <div style={{ marginTop: 8, background: "#fff", borderRadius: 16, padding: 12, boxShadow: "0 2px 8px #0001" }}>
-              <p style={{ fontSize: 12, color: "#6B7280", margin: "0 0 6px" }}>
-                Nhập Anthropic API Key để bật tính năng khen ngợi AI:
-              </p>
-              <input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="sk-ant-..."
-                style={{
-                  width: "100%", boxSizing: "border-box",
-                  border: "1.5px solid #E5E7EB", borderRadius: 12,
-                  padding: "8px 12px", fontSize: 14, outline: "none",
-                  fontFamily: "monospace",
-                }}
-                onFocus={(e) => (e.target.style.borderColor = "#7C3AED")}
-                onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
-              />
-            </div>
-          )}
         </div>
 
         {/* Error */}

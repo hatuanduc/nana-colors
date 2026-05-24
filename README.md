@@ -14,15 +14,21 @@
 
 ```
 nana-colors/
+├── functions/
+│   └── api/
+│       └── praise.js      # Cloudflare Pages Function (proxy → Anthropic)
 ├── src/
-│   └── main.jsx          # Entry point
-├── NanaColors.jsx         # Component chính
+│   └── main.jsx           # Entry point
+├── NanaColors.jsx          # Component chính
 ├── index.html
 ├── vite.config.js
 ├── package.json
-├── .env.example
+├── .dev.vars.example
 └── .gitignore
 ```
+
+> **Kiến trúc:** Browser → `/api/praise` (Cloudflare Worker) → Anthropic API.
+> API key nằm hoàn toàn phía server, không bao giờ lộ ra browser.
 
 ---
 
@@ -32,31 +38,32 @@ nana-colors/
 
 ```bash
 npm install
+npm install -g wrangler   # nếu chưa có
 ```
 
-### 2. Tạo file `.env.local`
-
-Sao chép từ `.env.example`:
+### 2. Tạo file `.dev.vars`
 
 ```bash
-cp .env.example .env.local
+cp .dev.vars.example .dev.vars
 ```
 
-Mở `.env.local` và điền API key thật:
+Điền API key thật vào `.dev.vars`:
 
 ```
-VITE_ANTHROPIC_API_KEY=sk-ant-api03-xxxxxxxx...
+ANTHROPIC_API_KEY=sk-ant-api03-xxxxxxxx...
 ```
 
 > Lấy API key tại: https://console.anthropic.com/settings/keys
 
-### 3. Chạy dev server
+### 3. Chạy dev server (có Worker)
 
 ```bash
-npm run dev
+npm run dev:full
 ```
 
-Mở trình duyệt tại `http://localhost:5173`
+Mở trình duyệt tại `http://localhost:8788`
+
+> `npm run dev` (không có `:full`) chạy Vite thuần — nút "Nana xong rồi!" sẽ báo lỗi vì không có Worker xử lý `/api/praise`.
 
 ---
 
@@ -88,13 +95,14 @@ git push -u origin main
 
 ### Bước 3 — Thêm API Key vào Cloudflare
 
-Trong trang cấu hình project (trước khi Save and Deploy), hoặc sau khi deploy vào **Settings > Environment variables**:
+Sau khi deploy vào **Settings > Environment variables**:
 
 | Variable name | Value |
 |--------------|-------|
-| `VITE_ANTHROPIC_API_KEY` | `sk-ant-api03-...` |
+| `ANTHROPIC_API_KEY` | `sk-ant-api03-...` |
 
 Chọn **Production** (và optionally **Preview**) rồi **Save**.
+Sau đó vào **Deployments** → **Retry deployment** để apply key mới.
 
 ### Bước 4 — Deploy
 
@@ -118,8 +126,7 @@ git push
 
 ## Lưu ý bảo mật
 
-API key được nhúng vào JavaScript bundle khi build (`VITE_` prefix). Điều này có nghĩa key **có thể bị xem** trong browser DevTools. Để tránh:
+API key nằm trong Cloudflare Worker (`functions/api/praise.js`), **không bao giờ gửi xuống browser**. Vẫn nên:
 
-- Tạo API key riêng chỉ dùng cho app này
 - Giới hạn spending limit trên [Anthropic Console](https://console.anthropic.com/settings/limits) (ví dụ $5/tháng)
-- Nếu cần bảo mật cao hơn: dùng Cloudflare Worker làm proxy để key không lộ ra browser
+- Không commit file `.dev.vars` (đã có trong `.gitignore`)
